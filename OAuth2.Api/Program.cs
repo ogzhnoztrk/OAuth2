@@ -49,18 +49,6 @@ builder.Services.AddAuthentication(options =>
 
 
     };
-    //Rol ayarları için kullanılabilir
-    //o.Events = new JwtBearerEvents
-    //{
-    //    OnTokenValidated = context =>
-    //    {
-    //        // Token doðrulandýktan sonra gelen rolleri kontrol etmek için bu noktayý kullanabilirsiniz
-    //        var role = context.Principal.Claims.Where(q => q.Type == "role").Select(q => q.Value).FirstOrDefault();
-
-    //        // Debug noktasýna ulaþýldýðýnda 'roles' deðiþkeni içinde gelen rolleri görebilirsiniz
-    //        return Task.CompletedTask;
-    //    }
-    //};
 });
 
 
@@ -95,6 +83,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthorization();
 app.UseAuthorization();
 
 app.MapControllers();

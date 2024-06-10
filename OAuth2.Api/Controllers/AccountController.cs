@@ -45,7 +45,6 @@ namespace OAuth2.Api.Controllers
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
-
             if (result.Succeeded)
             {
                 return Ok();
@@ -56,53 +55,77 @@ namespace OAuth2.Api.Controllers
 
         }
 
-        [HttpPost("signIn")]
+        [HttpPost("login")]
         public async Task<IActionResult> CreateLoginTokenAsync(LoginDto loginDto)
         {
+            //kullanıcı kontrolu
             UserRepository userRepository = new();
-
             var user = await userRepository.GetUserByUserNameAsync(loginDto.Email);
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user: user, password: loginDto.Password, false);
 
-
-            if (result.Succeeded)
+            if (user != null)
             {
-                // JWT'nin oluşturulması
-                var issuer = jwtModel.Issuer;
-                var audience = jwtModel.Audience;
-                var key = Encoding.ASCII.GetBytes
-                (jwtModel.Key);
+
+                var result = await _signInManager.CheckPasswordSignInAsync(user: user, password: loginDto.Password, false);
 
 
-                var tokenDescriptor = new SecurityTokenDescriptor
+                if (result.Succeeded)
                 {
-                    Subject = new ClaimsIdentity(new[]
-                    {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    }),
-                    Expires = DateTime.UtcNow.AddHours(1),
-                    Issuer = issuer,
-                    Audience = audience,
-                    SigningCredentials = new SigningCredentials
-                    (new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha512Signature)                
-                };
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var token = tokenHandler.CreateToken(tokenDescriptor);
+            
 
-                var stringToken = tokenHandler.WriteToken(token);
+                    var token = GenerateAccessToken(user.UserName, user.Id.ToString());
+                    return Ok(new { AccessToken = new JwtSecurityTokenHandler().WriteToken(token) });
 
 
+                }
+                return BadRequest(result);
 
-
-                return Ok(stringToken);
             }
-            return BadRequest(result);
 
+
+            return BadRequest("Böyle Bir Kullanıcı Yok");
 
         }
 
+
+
+        #region
+        // Generating token based on user information
+        private JwtSecurityToken GenerateAccessToken(string userName, string userId)
+        {
+            // Create user claims
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, userName),
+                new Claim(ClaimTypes.NameIdentifier, userId),
+            };
+
+            // JWT'nin oluşturulması
+            var issuer = jwtModel.Issuer;
+            var audience = jwtModel.Audience;
+            var key = Encoding.ASCII.GetBytes(jwtModel.Key);
+
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddHours(1),
+                Issuer = issuer,
+                Audience = audience,
+                SigningCredentials = new SigningCredentials
+                (new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha512Signature)
+            };
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            var stringToken = tokenHandler.WriteToken(token);
+
+
+
+            return token as JwtSecurityToken;
+        }
+        #endregion
 
     }
 }
